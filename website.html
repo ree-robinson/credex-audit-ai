@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AuditAI — AI Spend Auditor</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #0f0e0c;
+    --ink2: #3a3830;
+    --ink3: #7a7870;
+    --paper: #f7f5ef;
+    --paper2: #efecea;
+    --paper3: #e5e2d8;
+    --accent: #c8412f;
+    --accent2: #e5604e;
+    --gold: #c98a1a;
+    --green: #1a7a4a;
+    --green-bg: #e8f5ed;
+    --red-bg: #fcecea;
+    --border: #d4d0c6;
+    --r: 10px;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 56px;
+  }
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.35rem;
+    color: var(--ink);
+    text-decoration: none;
+    letter-spacing: -0.02em;
+  }
+  .logo span { color: var(--accent); }
+  nav .badge {
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* HERO */
+  .hero {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 5rem 2rem 3rem;
+    text-align: center;
+  }
+  .hero-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--red-bg);
+    border: 1px solid #f0bdb8;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    margin-bottom: 1.2rem;
+  }
+  .hero h1 em { color: var(--accent); font-style: italic; }
+  .hero p {
+    font-size: 1.1rem;
+    color: var(--ink2);
+    max-width: 540px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.7;
+  }
+  .hero-stats {
+    display: flex; justify-content: center; gap: 2.5rem;
+    margin-bottom: 3rem;
+    flex-wrap: wrap;
+  }
+  .hs { text-align: center; }
+  .hs-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.8rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .hs-lbl { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+
+  /* MAIN LAYOUT */
+  .container { max-width: 900px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+
+  /* STEP TABS */
+  .steps {
+    display: flex; gap: 0;
+    background: var(--paper3);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 2rem;
+  }
+  .step-tab {
+    flex: 1; text-align: center;
+    padding: 10px 6px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink3);
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none; background: transparent;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .step-tab.active {
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .step-num {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--paper3);
+    font-size: 11px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .step-tab.active .step-num {
+    background: var(--accent);
+    color: #fff;
+  }
+  .step-tab.done .step-num {
+    background: var(--green);
+    color: #fff;
+  }
+
+  /* PANELS */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* FORM CARDS */
+  .form-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .form-card h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 1.2rem;
+  }
+  .field-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  label { font-size: 12px; font-weight: 500; color: var(--ink2); }
+  input, select {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--paper);
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus { border-color: var(--accent2); }
+  input[type=number] { -moz-appearance: textfield; }
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  /* TOOL ROWS */
+  .tool-row {
+    display: grid;
+    grid-template-columns: 1.8fr 1.5fr 100px 80px 80px 36px;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--paper3);
+  }
+  .tool-row:last-child { border-bottom: none; }
+  .tool-row-header {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    color: var(--ink3);
+    padding-bottom: 6px;
+    border-bottom: 1.5px solid var(--border);
+    margin-bottom: 4px;
+    display: grid;
+    grid-template-columns: 1.8fr 1.5fr 100px 80px 80px 36px;
+    gap: 8px;
+  }
+  .btn-icon {
+    width: 34px; height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--paper);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    color: var(--ink3);
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-icon:hover { background: var(--red-bg); border-color: var(--accent2); color: var(--accent); }
+  .btn-add {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px;
+    border: 1.5px dashed var(--border);
+    border-radius: 8px;
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink3);
+    cursor: pointer;
+    margin-top: 12px;
+    transition: all 0.15s;
+    width: 100%;
+    justify-content: center;
+  }
+  .btn-add:hover { border-color: var(--accent); color: var(--accent); background: var(--red-bg); }
+
+  /* PRIMARY BTN */
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 28px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: -0.01em;
+  }
+  .btn-primary:hover { background: #b03626; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(200,65,47,0.3); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 22px;
+    background: transparent;
+    color: var(--ink2);
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover { border-color: var(--ink2); background: var(--paper2); }
+
+  .actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 1.5rem; }
+
+  /* RESULTS */
+  .results-header {
+    background: var(--ink);
+    color: #fff;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .results-header::before {
+    content: '';
+    position: absolute; top: -40px; right: -40px;
+    width: 180px; height: 180px;
+    background: var(--accent);
+    border-radius: 50%;
+    opacity: 0.15;
+  }
+  .results-header h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.6rem;
+    margin-bottom: 0.4rem;
+    position: relative;
+  }
+  .results-header p { font-size: 14px; color: #9a9890; position: relative; }
+  .savings-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .saving-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 1.2rem;
+    text-align: center;
+  }
+  .saving-card.highlight {
+    border-color: var(--green);
+    background: var(--green-bg);
+  }
+  .saving-card .sc-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .saving-card.highlight .sc-num { color: var(--green); }
+  .saving-card .sc-lbl { font-size: 12px; color: var(--ink3); font-weight: 500; }
+  .saving-pct {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--green);
+    background: var(--green-bg);
+    border: 1px solid #9fd4b6;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 4px;
+  }
+
+  /* TOOL REC TABLE */
+  .rec-table { width: 100%; border-collapse: collapse; }
+  .rec-table th {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink3); text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1.5px solid var(--border);
+    background: var(--paper2);
+  }
+  .rec-table td {
+    font-size: 13px;
+    padding: 12px 12px;
+    border-bottom: 1px solid var(--paper3);
+    vertical-align: middle;
+  }
+  .rec-table tr:last-child td { border-bottom: none; }
+  .tool-name { font-weight: 600; font-size: 14px; color: var(--ink); }
+  .tool-tag {
+    display: inline-block;
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 2px 7px; border-radius: 20px;
+    margin-left: 6px;
+  }
+  .tag-overpriced { background: var(--red-bg); color: var(--accent); border: 1px solid #f0bdb8; }
+  .tag-optimal { background: var(--green-bg); color: var(--green); border: 1px solid #9fd4b6; }
+  .tag-review { background: #fff8e6; color: var(--gold); border: 1px solid #f0d88c; }
+  .saving-num { font-weight: 700; color: var(--green); font-size: 14px; }
+  .zero-save { color: var(--ink3); font-size: 13px; }
+
+  /* AI SUMMARY */
+  .ai-summary-box {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  .ai-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: #6042c8;
+    background: #f0eeff;
+    border: 1px solid #d4c8f8;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 1rem;
+  }
+  .ai-summary-text {
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--ink2);
+  }
+  .ai-spinner {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--ink3); font-size: 14px;
+  }
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--paper3);
+    border-top-color: #6042c8;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* SHARE LINK */
+  .share-box {
+    background: var(--paper2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .share-url {
+    flex: 1;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: #fff;
+    color: var(--ink2);
+    cursor: text;
+  }
+  .btn-copy {
+    padding: 8px 16px;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+  }
+  .btn-copy:hover { background: #333; }
+  .copy-confirm { color: var(--green); font-size: 13px; font-weight: 500; display: none; }
+
+  /* EMAIL FORM */
+  .email-form {
+    background: var(--ink);
+    color: #fff;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .email-form h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.4rem;
+    margin-bottom: 0.3rem;
+  }
+  .email-form p { font-size: 13px; color: #9a9890; margin-bottom: 1.2rem; }
+  .email-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .email-form input, .email-form select {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.15);
+    color: #fff;
+  }
+  .email-form input::placeholder { color: rgba(255,255,255,0.3); }
+  .email-form label { color: rgba(255,255,255,0.6); }
+  .btn-white {
+    padding: 12px 24px;
+    background: #fff;
+    color: var(--ink);
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background 0.15s;
+  }
+  .btn-white:hover { background: var(--paper2); }
+  .email-success { color: #6de0a0; font-size: 14px; font-weight: 500; margin-top: 10px; display: none; }
+
+  /* CHART */
+  .bar-chart { margin: 1rem 0; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .bar-label { width: 120px; font-size: 12px; color: var(--ink2); text-align: right; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-wrap { flex: 1; background: var(--paper3); border-radius: 4px; height: 22px; position: relative; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s cubic-bezier(.4,0,.2,1); display: flex; align-items: center; padding-left: 8px; }
+  .bar-val { font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; }
+  .bar-saving { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--green); font-weight: 600; }
+
+  /* RESPONSIVE */
+  @media (max-width: 640px) {
+    .tool-row, .tool-row-header { grid-template-columns: 1.4fr 1.2fr 80px 70px 40px; }
+    .tool-row-header span:nth-child(4) { display: none; }
+    .tool-row input:nth-child(4) { display: none; }
+    .savings-grid { grid-template-columns: 1fr 1fr; }
+    .email-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 460px) {
+    .tool-row, .tool-row-header { grid-template-columns: 1fr 90px 70px 36px; }
+  }
+
+  /* FADE IN */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-up { animation: fadeUp 0.4s ease forwards; }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="#"><span>Audit</span>AI</a>
+  <span class="badge">Free Tool by Credex</span>
+</nav>
+
+<div class="hero">
+  <div class="hero-tag">🔍 AI Spend Auditor</div>
+  <h1>Stop <em>overpaying</em><br>for AI tools</h1>
+  <p>Enter your team's AI subscriptions and get a free audit showing exactly where you're wasting money — and how to cut it.</p>
+  <div class="hero-stats">
+    <div class="hs"><div class="hs-num">$4,200</div><div class="hs-lbl">avg. annual savings</div></div>
+    <div class="hs"><div class="hs-num">48%</div><div class="hs-lbl">avg. spend reduction</div></div>
+    <div class="hs"><div class="hs-num">2 min</div><div class="hs-lbl">to complete audit</div></div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- STEP TABS -->
+  <div class="steps" id="stepTabs">
+    <button class="step-tab active" onclick="goStep(0)">
+      <span class="step-num">1</span> Enter Tools
+    </button>
+    <button class="step-tab" onclick="goStep(1)">
+      <span class="step-num">2</span> Business Info
+    </button>
+    <button class="step-tab" onclick="goStep(2)">
+      <span class="step-num">3</span> Your Report
+    </button>
+  </div>
+
+  <!-- PANEL 1: TOOL INPUT -->
+  <div class="panel active" id="panel0">
+    <div class="form-card">
+      <h3>Your AI Tool Stack</h3>
+      <div class="tool-row-header">
+        <span>Tool / Service</span>
+        <span>Current Plan</span>
+        <span>Monthly $</span>
+        <span>Users</span>
+        <span>Use Case</span>
+        <span></span>
+      </div>
+      <div id="toolRows"></div>
+      <button class="btn-add" onclick="addToolRow()">＋ Add another tool</button>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" onclick="goStep(1)">Continue to Business Info →</button>
+    </div>
+  </div>
+
+  <!-- PANEL 2: BUSINESS INFO -->
+  <div class="panel" id="panel1">
+    <div class="form-card">
+      <h3>Tell us about your team</h3>
+      <div class="field-row">
+        <div class="field">
+          <label>Company Name</label>
+          <input type="text" id="companyName" placeholder="Acme Inc." />
+        </div>
+        <div class="field">
+          <label>Industry</label>
+          <select id="industry">
+            <option value="">Select industry</option>
+            <option>SaaS / Software</option>
+            <option>Marketing / Agency</option>
+            <option>E-Commerce</option>
+            <option>Fintech</option>
+            <option>Healthcare</option>
+            <option>Education</option>
+            <option>Consulting</option>
+            <option>Media / Content</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Team Size</label>
+          <select id="teamSize">
+            <option value="">Select size</option>
+            <option>1–5 (Solo / Micro)</option>
+            <option>6–20 (Small)</option>
+            <option>21–50 (Mid)</option>
+            <option>51–200 (Growth)</option>
+            <option>200+ (Enterprise)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Primary AI Use</label>
+          <select id="primaryUse">
+            <option value="">Select use case</option>
+            <option>Writing / Content</option>
+            <option>Coding / Development</option>
+            <option>Customer Support</option>
+            <option>Data Analysis</option>
+            <option>Sales / CRM</option>
+            <option>Design / Creative</option>
+            <option>Research</option>
+            <option>Multiple / General</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn-secondary" onclick="goStep(0)">← Back</button>
+      <button class="btn-primary" onclick="runAudit()">Run Audit ✦</button>
+    </div>
+  </div>
+
+  <!-- PANEL 3: RESULTS -->
+  <div class="panel" id="panel2">
+    <div id="resultsContent"></div>
+  </div>
+</div>
+
+<script>
+const AI_DB = {
+  "ChatGPT":       { plans: { "Free":0, "Plus":20, "Team":30, "Enterprise":60 }, betterPlan: { "Team":"Plus", "Enterprise":"Team" }, alt: null, category: "LLM / Chat" },
+  "Claude":        { plans: { "Free":0, "Pro":20, "Team":30, "Enterprise":60 }, betterPlan: { "Team":"Pro", "Enterprise":"Team" }, alt: null, category: "LLM / Chat" },
+  "GitHub Copilot":{ plans: { "Individual":10, "Business":19, "Enterprise":39 }, betterPlan: { "Business":"Individual", "Enterprise":"Business" }, alt: "Codeium (Free)", category: "Code Assistant" },
+  "Midjourney":    { plans: { "Basic":10, "Standard":30, "Pro":60, "Mega":120 }, betterPlan: { "Pro":"Standard", "Mega":"Pro" }, alt: "Leonardo.ai (Free tier)", category: "Image Generation" },
+  "Jasper":        { plans: { "Creator":49, "Teams":125, "Business":500 }, betterPlan: { "Teams":"Creator", "Business":"Teams" }, alt: "ChatGPT Plus ($20)", category: "Writing AI" },
+  "Copy.ai":       { plans: { "Free":0, "Starter":49, "Advanced":249 }, betterPlan: { "Advanced":"Starter" }, alt: "ChatGPT Plus ($20)", category: "Writing AI" },
+  "Grammarly":     { plans: { "Free":0, "Premium":12, "Business":15 }, betterPlan: { "Business":"Premium" }, alt: null, category: "Writing Assistant" },
+  "Notion AI":     { plans: { "Add-on":10 }, betterPlan: {}, alt: "ChatGPT Plus (if standalone)", category: "Productivity" },
+  "Perplexity":    { plans: { "Free":0, "Pro":20, "Enterprise":40 }, betterPlan: { "Enterprise":"Pro" }, alt: null, category: "AI Search" },
+  "Runway":        { plans: { "Standard":15, "Pro":35, "Unlimited":95 }, betterPlan: { "Unlimited":"Pro" }, alt: "CapCut AI (Free)", category: "Video AI" },
+  "ElevenLabs":    { plans: { "Free":0, "Starter":5, "Creator":22, "Pro":99 }, betterPlan: { "Pro":"Creator" }, alt: null, category: "Voice AI" },
+  "Otter.ai":      { plans: { "Basic":0, "Pro":10, "Business":20 }, betterPlan: { "Business":"Pro" }, alt: "Whisper (Free/OSS)", category: "Transcription" },
+  "Zapier":        { plans: { "Free":0, "Starter":20, "Professional":49, "Team":69 }, betterPlan: { "Professional":"Starter", "Team":"Professional" }, alt: "Make.com (cheaper)", category: "Automation" },
+  "Cursor":        { plans: { "Hobby":0, "Pro":20, "Business":40 }, betterPlan: { "Business":"Pro" }, alt: null, category: "Code Editor AI" },
+  "Other":         { plans: {}, betterPlan: {}, alt: null, category: "Other" },
+};
+
+const TOOL_NAMES = Object.keys(AI_DB);
+
+let toolRows = [];
+
+function addToolRow(prefill = {}) {
+  const id = Date.now();
+  toolRows.push(id);
+  const el = document.createElement('div');
+  el.className = 'tool-row fade-up';
+  el.id = 'row-' + id;
+  el.innerHTML = `
+    <div class="field">
+      <input list="tool-list-${id}" name="tool" placeholder="e.g. ChatGPT" value="${prefill.tool||''}" oninput="updatePlanOptions(this, ${id})" />
+      <datalist id="tool-list-${id}">${TOOL_NAMES.map(t=>`<option value="${t}">`).join('')}</datalist>
+    </div>
+    <div class="field">
+      <select name="plan" id="plan-${id}">
+        <option value="">Plan</option>
+      </select>
+    </div>
+    <div class="field">
+      <input type="number" name="cost" placeholder="$0" min="0" value="${prefill.cost||''}" style="width:100%" />
+    </div>
+    <div class="field">
+      <input type="number" name="users" placeholder="1" min="1" value="${prefill.users||1}" style="width:100%" />
+    </div>
+    <div class="field">
+      <select name="usecase">
+        <option value="">Use case</option>
+        <option>Writing</option>
+        <option>Coding</option>
+        <option>Design</option>
+        <option>Research</option>
+        <option>Support</option>
+        <option>Analysis</option>
+        <option>General</option>
+      </select>
+    </div>
+    <button class="btn-icon" onclick="removeRow(${id})" title="Remove">✕</button>
+  `;
+  document.getElementById('toolRows').appendChild(el);
+  if (prefill.tool) updatePlanOptions(el.querySelector('input[name=tool]'), id, prefill.plan);
+}
+
+function removeRow(id) {
+  const el = document.getElementById('row-' + id);
+  if (el) el.remove();
+  toolRows = toolRows.filter(r => r !== id);
+}
+
+function updatePlanOptions(input, id, selectVal = '') {
+  const toolName = input.value.trim();
+  const sel = document.getElementById('plan-' + id);
+  const data = AI_DB[toolName];
+  sel.innerHTML = '<option value="">Plan</option>';
+  if (data) {
+    Object.keys(data.plans).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p; opt.textContent = p + (data.plans[p] > 0 ? ' ($'+data.plans[p]+'/user)' : ' (Free)');
+      if (p === selectVal) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+function getToolData() {
+  return Array.from(document.querySelectorAll('.tool-row')).map(row => ({
+    tool: row.querySelector('[name=tool]').value.trim(),
+    plan: row.querySelector('[name=plan]').value,
+    cost: parseFloat(row.querySelector('[name=cost]').value) || 0,
+    users: parseInt(row.querySelector('[name=users]').value) || 1,
+    usecase: row.querySelector('[name=usecase]').value,
+  })).filter(r => r.tool && r.cost > 0);
+}
+
+function auditTool(entry) {
+  const db = AI_DB[entry.tool];
+  if (!db) return { status: 'review', recommendation: 'Verify pricing for this tool', saving: 0 };
+  const betterPlan = db.betterPlan[entry.plan];
+  if (betterPlan && db.plans[betterPlan] !== undefined) {
+    const betterCost = db.plans[betterPlan] * entry.users;
+    const saving = entry.cost - betterCost;
+    if (saving > 0) return { status: 'overpriced', recommendation: `Switch to ${entry.tool} ${betterPlan}`, saving, newCost: betterCost };
+  }
+  if (db.alt) return { status: 'review', recommendation: `Consider alternative: ${db.alt}`, saving: Math.round(entry.cost * 0.5) };
+  return { status: 'optimal', recommendation: 'Plan looks appropriate for your usage', saving: 0 };
+}
+
+let auditResults = null;
+
+function runAudit() {
+  const tools = getToolData();
+  if (tools.length === 0) { alert('Please add at least one AI tool with cost.'); goStep(0); return; }
+
+  const results = tools.map(t => ({ ...t, audit: auditTool(t) }));
+  const totalCurrent = results.reduce((s,r) => s + r.cost, 0);
+  const totalSaving = results.reduce((s,r) => s + r.audit.saving, 0);
+  const totalOptimized = totalCurrent - totalSaving;
+  const pct = totalCurrent > 0 ? Math.round((totalSaving / totalCurrent) * 100) : 0;
+
+  auditResults = { results, totalCurrent, totalSaving, totalOptimized, pct,
+    company: document.getElementById('companyName').value || 'Your Company',
+    industry: document.getElementById('industry').value,
+    teamSize: document.getElementById('teamSize').value,
+  };
+
+  renderResults(auditResults);
+  goStep(2);
+  generateAISummary(auditResults);
+}
+
+function renderResults(d) {
+  const shareId = 'audit-' + Math.random().toString(36).substr(2, 8).toUpperCase();
+  const shareUrl = `${window.location.origin}${window.location.pathname}?audit=${shareId}`;
+
+  let rowsHtml = d.results.map(r => {
+    const tag = r.audit.status === 'overpriced' ? '<span class="tool-tag tag-overpriced">Overpriced</span>'
+              : r.audit.status === 'optimal' ? '<span class="tool-tag tag-optimal">Optimal</span>'
+              : '<span class="tool-tag tag-review">Review</span>';
+    const savingHtml = r.audit.saving > 0
+      ? `<span class="saving-num">-$${r.audit.saving.toFixed(0)}/mo</span>`
+      : `<span class="zero-save">—</span>`;
+    return `<tr>
+      <td><span class="tool-name">${r.tool}</span>${tag}<br><span style="font-size:12px;color:var(--ink3)">${r.plan||'Unknown plan'} · ${r.users} user${r.users>1?'s':''}</span></td>
+      <td style="font-size:13px">$${r.cost.toFixed(0)}/mo</td>
+      <td style="font-size:13px;color:var(--ink2)">${r.audit.recommendation}</td>
+      <td>${savingHtml}</td>
+    </tr>`;
+  }).join('');
+
+  // Bar chart
+  const maxCost = Math.max(...d.results.map(r => r.cost));
+  const bars = d.results.map(r => {
+    const w = maxCost > 0 ? Math.round((r.cost / maxCost) * 100) : 0;
+    const savW = maxCost > 0 ? Math.round((r.audit.saving / maxCost) * 100) : 0;
+    const color = r.audit.status === 'overpriced' ? 'var(--accent)' : r.audit.status === 'optimal' ? 'var(--green)' : 'var(--gold)';
+    return `<div class="bar-row">
+      <div class="bar-label" title="${r.tool}">${r.tool}</div>
+      <div class="bar-wrap">
+        <div class="bar-fill" style="width:${w}%;background:${color}">
+          <span class="bar-val">$${r.cost}</span>
+        </div>
+        ${r.audit.saving>0?`<span class="bar-saving">-$${r.audit.saving}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('resultsContent').innerHTML = `
+    <div class="results-header fade-up">
+      <h2>🎯 Audit Complete — ${d.company}</h2>
+      <p>Based on ${d.results.length} tool${d.results.length>1?'s':''} · ${d.teamSize||'Team'} · ${d.industry||'General'}</p>
+    </div>
+
+    <div class="savings-grid fade-up">
+      <div class="saving-card">
+        <div class="sc-num">$${d.totalCurrent.toFixed(0)}</div>
+        <div class="sc-lbl">Current Monthly Spend</div>
+      </div>
+      <div class="saving-card highlight">
+        <div class="sc-num">$${d.totalSaving.toFixed(0)}</div>
+        <div class="sc-lbl">Monthly Savings</div>
+        <div class="saving-pct">${d.pct}% reduction</div>
+      </div>
+      <div class="saving-card highlight">
+        <div class="sc-num">$${(d.totalSaving * 12).toFixed(0)}</div>
+        <div class="sc-lbl">Annual Savings</div>
+        <div class="saving-pct" style="background:#e8f5ed;border-color:#9fd4b6">🎉 Save this yearly</div>
+      </div>
+    </div>
+
+    <!-- AI SUMMARY -->
+    <div class="ai-summary-box fade-up">
+      <div class="ai-tag">✦ AI Analysis</div>
+      <div id="aiSummaryContent">
+        <div class="ai-spinner"><div class="spinner"></div> Generating personalized insights…</div>
+      </div>
+    </div>
+
+    <!-- SHARE LINK -->
+    <div class="share-box fade-up">
+      <span style="font-size:13px;font-weight:600;white-space:nowrap">🔗 Share Report</span>
+      <input class="share-url" id="shareUrl" value="${shareUrl}" readonly />
+      <button class="btn-copy" onclick="copyLink('${shareUrl}', this)">Copy</button>
+      <span class="copy-confirm" id="copyConfirm">✓ Copied!</span>
+    </div>
+
+    <!-- BREAKDOWN TABLE -->
+    <div class="form-card fade-up" style="padding:0;overflow:hidden">
+      <div style="padding:1rem 1.2rem 0.5rem;border-bottom:1px solid var(--paper3)">
+        <h3 style="margin:0">Tool-by-Tool Breakdown</h3>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="rec-table">
+          <thead><tr>
+            <th>Tool</th><th>Current Cost</th><th>Recommendation</th><th>Saving</th>
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- BAR CHART -->
+    <div class="form-card fade-up">
+      <h3>Spend Visualized</h3>
+      <div class="bar-chart">${bars}</div>
+      <div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap">
+        <span style="font-size:12px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:var(--accent);display:inline-block"></span>Overpriced</span>
+        <span style="font-size:12px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:var(--green);display:inline-block"></span>Optimal</span>
+        <span style="font-size:12px;display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:3px;background:var(--gold);display:inline-block"></span>Needs Review</span>
+      </div>
+    </div>
+
+    <!-- EMAIL CAPTURE -->
+    <div class="email-form fade-up">
+      <h3>Get your full PDF report</h3>
+      <p>We'll send a detailed savings plan + exclusive AI credits offer to your inbox — free.</p>
+      <div class="email-row">
+        <div class="field">
+          <label>Work Email *</label>
+          <input type="email" id="captureEmail" placeholder="you@company.com" />
+        </div>
+        <div class="field">
+          <label>Your Role</label>
+          <select id="captureRole">
+            <option value="">Select role</option>
+            <option>Founder / CEO</option>
+            <option>CTO / Engineering Lead</option>
+            <option>Product Manager</option>
+            <option>Operations</option>
+            <option>Finance</option>
+            <option>Marketing</option>
+            <option>Other</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-white" onclick="captureEmail()">Send Me the Report →</button>
+      <div class="email-success" id="emailSuccess">✓ Report sent! Check your inbox (or spam). Credex will reach out shortly.</div>
+    </div>
+
+    <div style="text-align:center;margin-top:1rem">
+      <button class="btn-secondary" onclick="goStep(0);resetAudit()">← Start a new audit</button>
+    </div>
+  `;
+}
+
+async function generateAISummary(d) {
+  const overspent = d.results.filter(r => r.audit.status === 'overpriced');
+  const optimal = d.results.filter(r => r.audit.status === 'optimal');
+
+  const prompt = `You are an AI spend analyst at Credex, a company that sells discounted AI credits to startups.
+
+A ${d.teamSize||'startup'} team in ${d.industry||'tech'} called "${d.company}" just completed an AI spend audit. Here's their data:
+
+${d.results.map(r => `- ${r.tool} (${r.plan}, $${r.cost}/mo, ${r.users} users) → ${r.audit.recommendation} (saves $${r.audit.saving}/mo)`).join('\n')}
+
+Total current spend: $${d.totalCurrent}/mo
+Total monthly savings possible: $${d.totalSaving}/mo (${d.pct}% reduction)
+Annual savings: $${d.totalSaving * 12}
+
+Write a 3-4 sentence professional audit summary that:
+1. Identifies the main overspending pattern
+2. Gives specific actionable advice
+3. Ends with a soft mention that Credex offers discounted AI credits that could help them save even more
+
+Keep it conversational, insightful, and concise. No bullet points. No headers. Just a flowing paragraph.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    const text = data?.content?.[0]?.text || 'Unable to generate summary.';
+    document.getElementById('aiSummaryContent').innerHTML = `<p class="ai-summary-text">${text}</p>`;
+  } catch (e) {
+    // Fallback summary
+    const fallback = overspent.length > 0
+      ? `${d.company} is spending $${d.totalCurrent}/month across ${d.results.length} AI tools, with ${overspent.length} tool${overspent.length>1?'s':''} (${overspent.map(r=>r.tool).join(', ')}) on plans that exceed typical usage needs. By switching to more appropriately-sized plans, you could recover $${d.totalSaving}/month — that's $${d.totalSaving*12} annually. Many of these savings come from teams paying for enterprise-tier features they never use. Credex also offers discounted AI API credits that can further reduce costs for teams heavily relying on AI generation.`
+      : `${d.company} has a well-optimized AI stack at $${d.totalCurrent}/month. Most of your tools are on appropriate plans for your team size. Consider consolidating overlapping tools for further efficiency gains. Credex offers discounted AI credits that can reduce variable AI API costs by up to 40%.`;
+    document.getElementById('aiSummaryContent').innerHTML = `<p class="ai-summary-text">${fallback}</p>`;
+  }
+}
+
+function copyLink(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    btn.textContent = '✓ Copied';
+    btn.style.background = 'var(--green)';
+    setTimeout(() => { btn.textContent = 'Copy'; btn.style.background = ''; }, 2000);
+  });
+}
+
+function captureEmail() {
+  const email = document.getElementById('captureEmail').value.trim();
+  if (!email || !email.includes('@')) { alert('Please enter a valid email address.'); return; }
+  // In production this would POST to a backend / Airtable / Supabase etc.
+  document.getElementById('emailSuccess').style.display = 'block';
+  console.log('Lead captured:', {
+    email,
+    role: document.getElementById('captureRole').value,
+    company: auditResults?.company,
+    savings: auditResults?.totalSaving,
+    annualSavings: (auditResults?.totalSaving||0) * 12,
+  });
+}
+
+function goStep(n) {
+  document.querySelectorAll('.panel').forEach((p,i) => {
+    p.classList.toggle('active', i === n);
+  });
+  document.querySelectorAll('.step-tab').forEach((t,i) => {
+    t.classList.remove('active', 'done');
+    if (i === n) t.classList.add('active');
+    else if (i < n) t.classList.add('done');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetAudit() {
+  document.getElementById('toolRows').innerHTML = '';
+  toolRows = [];
+  addDefaultRows();
+}
+
+function addDefaultRows() {
+  addToolRow({ tool: 'ChatGPT', plan: 'Team', cost: 60, users: 2 });
+  addToolRow({ tool: 'GitHub Copilot', plan: 'Business', cost: 38, users: 2 });
+  addToolRow({ tool: 'Claude', plan: 'Pro', cost: 20, users: 1 });
+}
+
+// Init
+addDefaultRows();
+</script>
+</body>
+</html>
